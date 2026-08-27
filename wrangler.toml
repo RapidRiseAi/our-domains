@@ -1,0 +1,25 @@
+# Cloudflare Worker that answers for every domain we own but are not using.
+#
+# The routes below are generated from src/domains.js. Add a domain there and run
+# `npm run routes:sync` rather than editing the generated block by hand.
+
+name = "our-domains"
+main = "src/index.js"
+compatibility_date = "2026-08-27"
+
+# Keeps a <worker>.workers.dev preview URL around so a new page can be checked
+# before any real domain is pointed at it.
+workers_dev = true
+
+# BEGIN GENERATED ROUTES - do not edit by hand, run `npm run routes:sync`
+# No domains registered yet - add them to src/domains.js.
+routes = []
+# END GENERATED ROUTES
+
+[observability]
+enabled = true
+
+[vars]
+BRAND_NAME = "RapidRise AI"
+BRAND_URL = "https://rapidriseai.com"
+CONTACT_EMAIL = "domains@rapidriseai.com"

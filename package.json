@@ -1,0 +1,22 @@
+{
+  "name": "our-domains",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker that serves an 'out of service' landing page for every domain RapidRise AI owns but is not currently using.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test \"test/**/*.test.js\"",
+    "routes:sync": "node scripts/sync-routes.mjs",
+    "routes:check": "node scripts/sync-routes.mjs --check",
+    "build:static": "node scripts/build-static.mjs",
+    "check": "npm run test && npm run routes:check"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

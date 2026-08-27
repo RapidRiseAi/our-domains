@@ -1,0 +1,110 @@
+import { resolveConfig } from './config.js';
+import { lookupDomain, normalizeHostname } from './domains.js';
+import { renderDomainPage } from './page.js';
+
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-frame-options': 'DENY',
+  // The page is one self-contained document: inline CSS, a data-URI favicon,
+  // and no scripts at all.
+  'content-security-policy':
+    "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+};
+
+const ALLOWED_METHODS = 'GET, HEAD, OPTIONS';
+
+export default {
+  /**
+   * @param {Request} request
+   * @param {Record<string, unknown>} env
+   * @returns {Response}
+   */
+  fetch(request, env) {
+    return handleRequest(request, env);
+  },
+};
+
+/**
+ * @param {Request} request
+ * @param {Record<string, unknown>} [env]
+ * @returns {Response}
+ */
+export function handleRequest(request, env = {}) {
+  const method = request.method.toUpperCase();
+
+  if (method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: { allow: ALLOWED_METHODS, ...SECURITY_HEADERS } });
+  }
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    return textResponse('Method not allowed\n', 405, { allow: ALLOWED_METHODS });
+  }
+
+  const url = new URL(request.url);
+  const config = resolveConfig(env);
+  const path = url.pathname;
+
+  if (path === '/robots.txt') {
+    // Parked domains stay crawlable: if someone searches for the domain name we
+    // want them to find the page that tells them how to buy it.
+    return textResponse(`User-agent: *\nAllow: /\n`, 200);
+  }
+
+  if (path === '/favicon.ico') {
+    // The real icon is a data URI in the page <head>; answer the automatic
+    // browser request without logging a 404.
+    return new Response(null, { status: 204, headers: SECURITY_HEADERS });
+  }
+
+  if (path === '/health' || path === '/healthz') {
+    const body = JSON.stringify({ status: 'parked', hostname: normalizeHostname(url.hostname) });
+    return new Response(method === 'HEAD' ? null : `${body}\n`, {
+      status: 200,
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        ...SECURITY_HEADERS,
+      },
+    });
+  }
+
+  const hostname = normalizeHostname(url.hostname);
+  const html = renderDomainPage({
+    hostname,
+    config,
+    entry: lookupDomain(hostname),
+  });
+
+  // Any path other than the root is a stale inbound link to a site that no
+  // longer exists — show the same page, but say 404 rather than pretend the
+  // old URL is still there.
+  const status = path === '/' ? 200 : 404;
+
+  return new Response(method === 'HEAD' ? null : html, {
+    status,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+      ...SECURITY_HEADERS,
+    },
+  });
+}
+
+/**
+ * @param {string} body
+ * @param {number} status
+ * @param {Record<string, string>} [extraHeaders]
+ * @returns {Response}
+ */
+function textResponse(body, status, extraHeaders = {}) {
+  return new Response(body, {
+    status,
+    headers: {
+      'content-type': 'text/plain; charset=utf-8',
+      'cache-control': 'public, max-age=300',
+      ...SECURITY_HEADERS,
+      ...extraHeaders,
+    },
+  });
+}
