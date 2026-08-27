@@ -5,6 +5,7 @@ import worker, { handleRequest } from '../src/index.js';
 import { resolveConfig, DEFAULT_CONFIG } from '../src/config.js';
 import { listHostnames, lookupDomain, normalizeHostname } from '../src/domains.js';
 import { escapeHtml, renderDomainPage } from '../src/page.js';
+import { LOGO_CONTENT_TYPE, logoBytes } from '../src/logo.js';
 
 /**
  * @param {string} url
@@ -24,15 +25,27 @@ test('serves the parked page on the root of any hostname', async () => {
   const html = await response.text();
   assert.match(html, /This website is out of service\./);
   assert.match(html, /some-domain-we-own\.com/);
-  assert.match(html, /Owned by RapidRise AI/);
+  assert.match(html, /Rapid Rise AI \(Pty\) Ltd/);
 });
 
-test('links to the RapidRise AI site and to an enquiry email', async () => {
+test('links to the Rapid Rise AI site, an enquiry email and WhatsApp', async () => {
   const html = await get('https://parked.example/').text();
 
-  assert.match(html, /href="https:\/\/rapidriseai\.com"/);
-  assert.match(html, /Visit RapidRise AI/);
-  assert.match(html, /href="mailto:domains@rapidriseai\.com\?subject=Enquiry%20about%20parked\.example/);
+  assert.match(html, /href="https:\/\/www\.rapidriseai\.com"/);
+  assert.match(html, /Visit Rapid Rise AI/);
+  assert.match(html, /href="mailto:team@rapidriseai\.com\?subject=Enquiry%20about%20parked\.example/);
+  assert.match(html, /href="https:\/\/wa\.me\/27649031234\?text=[^"]*parked\.example/);
+});
+
+test('carries the company registration in the footer, as the main site does', async () => {
+  const html = await get('https://parked.example/').text();
+  assert.match(html, /Rapid Rise AI &middot; Reg\. No\. K2024727338\. All rights reserved\./);
+});
+
+test('an empty WHATSAPP_URL drops the WhatsApp button', async () => {
+  const html = await get('https://parked.example/', {}, { WHATSAPP_URL: '' }).text();
+  assert.doesNotMatch(html, /wa\.me/);
+  assert.match(html, /Enquire about this domain/);
 });
 
 test('sets security headers and a short cache lifetime', () => {
@@ -87,8 +100,28 @@ test('serves a crawlable robots.txt', async () => {
   assert.equal(await response.text(), 'User-agent: *\nAllow: /\n');
 });
 
-test('answers /favicon.ico without a 404', () => {
-  assert.equal(get('https://parked.example/favicon.ico').status, 204);
+test('serves the logo with an immutable cache and points favicon.ico at it', async () => {
+  const response = get('https://parked.example/logo.png');
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), LOGO_CONTENT_TYPE);
+  assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  assert.deepEqual([...bytes.slice(0, 4)], [0x89, 0x50, 0x4e, 0x47], 'should be a PNG');
+  assert.equal(bytes.length, logoBytes().length);
+
+  const favicon = get('https://parked.example/favicon.ico');
+  assert.equal(favicon.status, 301);
+  assert.equal(favicon.headers.get('location'), 'https://parked.example/logo.png');
+});
+
+test('the page references the logo rather than inlining it', async () => {
+  const html = await get('https://parked.example/').text();
+
+  assert.match(html, /<img class="logo" src="\/logo\.png"/);
+  assert.doesNotMatch(html, /data:image\/png/);
+  assert.ok(html.length < 12000, `page should stay small, got ${html.length} bytes`);
 });
 
 test('exposes a health endpoint for uptime monitoring', async () => {
@@ -125,20 +158,29 @@ test('the default worker export delegates to the handler', async () => {
 test('environment variables override the branding', async () => {
   const env = {
     BRAND_NAME: 'Acme Holdings',
+    LEGAL_NAME: 'Acme Holdings Ltd',
     BRAND_URL: 'https://acme.example',
     CONTACT_EMAIL: 'hello@acme.example',
   };
 
   const html = await get('https://parked.example/', {}, env).text();
 
-  assert.match(html, /Owned by Acme Holdings/);
+  assert.match(html, /Visit Acme Holdings/);
+  assert.match(html, /Acme Holdings Ltd/);
   assert.match(html, /href="https:\/\/acme\.example"/);
   assert.match(html, /mailto:hello@acme\.example/);
 });
 
-test('blank environment variables fall back to the defaults', () => {
+test('a blank required variable falls back rather than leaving a hole', () => {
   assert.deepEqual(resolveConfig({ BRAND_NAME: '   ', BRAND_URL: undefined }), DEFAULT_CONFIG);
   assert.deepEqual(resolveConfig(), DEFAULT_CONFIG);
+  assert.equal(resolveConfig({ CONTACT_EMAIL: '' }).contactEmail, DEFAULT_CONFIG.contactEmail);
+});
+
+test('a blank optional variable clears it', () => {
+  assert.equal(resolveConfig({ WHATSAPP_URL: '' }).whatsappUrl, '');
+  assert.equal(resolveConfig({ TAGLINE: '' }).tagline, '');
+  assert.equal(resolveConfig({ REGISTRATION_NUMBER: '' }).registrationNumber, '');
 });
 
 test('registry copy replaces the headline and adds a note', () => {
@@ -149,7 +191,7 @@ test('registry copy replaces the headline and adds a note', () => {
 
   assert.match(html, /<h1>Reserved<\/h1>/);
   assert.match(html, /Launching in 2027\./);
-  assert.match(html, /reserved for an upcoming RapidRise AI project/);
+  assert.match(html, /reserved for an upcoming Rapid Rise AI project/);
   assert.doesNotMatch(html, /open to offers/);
 });
 

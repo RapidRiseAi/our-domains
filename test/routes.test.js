@@ -47,7 +47,7 @@ test('replaces only the marked block in wrangler.toml', () => {
   const updated = applyRoutesBlock(config, buildRoutesBlock([{ domain: 'example.com' }]));
 
   assert.match(updated, /^name = "our-domains"$/m);
-  assert.match(updated, /^BRAND_URL = "https:\/\/rapidriseai\.com"$/m);
+  assert.match(updated, /^BRAND_URL = "https:\/\/www\.rapidriseai\.com"$/m);
   assert.match(updated, /zone_name = "example\.com"/);
   assert.equal(updated.indexOf(BEGIN), config.indexOf(BEGIN));
   assert.equal((updated.match(new RegExp(END, 'g')) ?? []).length, 1);

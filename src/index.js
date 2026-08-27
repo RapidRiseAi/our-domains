@@ -1,15 +1,16 @@
 import { resolveConfig } from './config.js';
 import { lookupDomain, normalizeHostname } from './domains.js';
-import { renderDomainPage } from './page.js';
+import { LOGO_PATH, renderDomainPage } from './page.js';
+import { LOGO_CONTENT_TYPE, logoBytes } from './logo.js';
 
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'DENY',
-  // The page is one self-contained document: inline CSS, a data-URI favicon,
-  // and no scripts at all.
+  // The page loads nothing off-origin: inline CSS, the logo from this same
+  // host, and no scripts at all.
   'content-security-policy':
-    "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
 };
 
 const ALLOWED_METHODS = 'GET, HEAD, OPTIONS';
@@ -51,10 +52,22 @@ export function handleRequest(request, env = {}) {
     return textResponse(`User-agent: *\nAllow: /\n`, 200);
   }
 
+  if (path === LOGO_PATH) {
+    // Immutable: the bytes only change when the Worker is redeployed, and the
+    // page is far smaller for referencing this instead of inlining it.
+    return new Response(method === 'HEAD' ? null : logoBytes(), {
+      status: 200,
+      headers: {
+        'content-type': LOGO_CONTENT_TYPE,
+        'cache-control': 'public, max-age=31536000, immutable',
+        ...SECURITY_HEADERS,
+      },
+    });
+  }
+
   if (path === '/favicon.ico') {
-    // The real icon is a data URI in the page <head>; answer the automatic
-    // browser request without logging a 404.
-    return new Response(null, { status: 204, headers: SECURITY_HEADERS });
+    // Browsers ask for this unprompted; send them to the real mark.
+    return Response.redirect(new URL(LOGO_PATH, url).toString(), 301);
   }
 
   if (path === '/health' || path === '/healthz') {
@@ -74,6 +87,7 @@ export function handleRequest(request, env = {}) {
     hostname,
     config,
     entry: lookupDomain(hostname),
+    logoHref: LOGO_PATH,
   });
 
   // Any path other than the root is a stale inbound link to a site that no

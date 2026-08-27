@@ -15,6 +15,7 @@ import { dirname, join } from 'node:path';
 import { DEFAULT_CONFIG } from '../src/config.js';
 import { DOMAINS, lookupDomain, normalizeHostname } from '../src/domains.js';
 import { renderDomainPage } from '../src/page.js';
+import { logoBytes } from '../src/logo.js';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const OUT_DIR = join(ROOT, 'dist');
@@ -27,8 +28,16 @@ function write(hostname, outPath) {
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(
     outPath,
-    renderDomainPage({ hostname, config: DEFAULT_CONFIG, entry: lookupDomain(hostname) }),
+    // Relative, so the pair works both when opened straight off disk and
+    // when served from the root of a static host.
+    renderDomainPage({
+      hostname,
+      config: DEFAULT_CONFIG,
+      entry: lookupDomain(hostname),
+      logoHref: 'logo.png',
+    }),
   );
+  writeFileSync(join(dirname(outPath), 'logo.png'), logoBytes());
   console.log(`  ${hostname} -> ${outPath.replace(`${ROOT}/`, '')}`);
 }
 

@@ -2,13 +2,8 @@ import { DEFAULT_CONFIG } from './config.js';
 
 const MAX_DISPLAY_LENGTH = 80;
 
-const FAVICON_SVG =
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>" +
-  "<rect width='32' height='32' rx='7' fill='#0f1420'/>" +
-  "<path d='M7 22l6-6 4 4 8-9' fill='none' stroke='#6c8cff' stroke-width='3' " +
-  "stroke-linecap='round' stroke-linejoin='round'/></svg>";
-
-const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`;
+/** Where the Worker serves the logo. Also the absolute path used for og:image. */
+export const LOGO_PATH = '/logo.png';
 
 /**
  * @param {unknown} value
@@ -63,40 +58,40 @@ export function buildMailto({ email, domain, brandName }) {
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
+/**
+ * Pre-fill the WhatsApp message the same way.
+ *
+ * @param {{ url: string, domain: string }} params
+ * @returns {string}
+ */
+export function buildWhatsapp({ url, domain }) {
+  const text = encodeURIComponent(`Hi, I would like to talk about the domain ${domain}.`);
+  return `${url}${url.includes('?') ? '&' : '?'}text=${text}`;
+}
+
+/*
+ * Colours, type and button shapes below are lifted from www.rapidriseai.com so
+ * a parked domain reads as the same company. The site is dark-only, so this
+ * page is too.
+ *
+ * The brand fonts (Plus Jakarta Sans, Inter) are named first and fall back to
+ * system fonts. The main site self-hosts them specifically to avoid calling the
+ * Google Fonts CDN, and this page keeps that promise by not fetching webfonts
+ * at all — no third-party requests, no bytes beyond the page itself.
+ */
 const STYLES = `
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  color-scheme: light dark;
-  --bg: #f4f6fa;
-  --glow: rgba(47, 91, 255, 0.14);
-  --surface: #ffffff;
-  --text: #0d1424;
-  --muted: #5b6577;
-  --border: #e3e7ef;
-  --accent: #2f5bff;
-  --accent-hover: #2449da;
-  --accent-text: #ffffff;
-  --pill-bg: rgba(47, 91, 255, 0.08);
-  --pill-text: #2449da;
-  --shadow: 0 24px 60px -28px rgba(13, 20, 36, 0.35);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #06090f;
-    --glow: rgba(108, 140, 255, 0.18);
-    --surface: #10151f;
-    --text: #eef2f9;
-    --muted: #96a1b5;
-    --border: #1e2634;
-    --accent: #6c8cff;
-    --accent-hover: #8aa3ff;
-    --accent-text: #07101f;
-    --pill-bg: rgba(108, 140, 255, 0.12);
-    --pill-text: #a9beff;
-    --shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.85);
-  }
+  color-scheme: dark;
+  --bg: #000;
+  --text: #e6f0ff;
+  --heading: #f4f9fe;
+  --muted: #a9c2de;
+  --accent: #22a6f4;
+  --card-border: rgba(96, 150, 220, 0.16);
+  --sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Plus Jakarta Sans", Inter, system-ui, -apple-system, sans-serif;
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -108,73 +103,65 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 32px 20px;
+  gap: 26px;
+  padding: 40px 20px;
   background-color: var(--bg);
-  background-image: radial-gradient(60rem 32rem at 50% -12rem, var(--glow), transparent 70%);
+  background-image:
+    radial-gradient(46rem 26rem at 50% -6rem, rgba(30, 88, 245, 0.16), transparent 68%),
+    radial-gradient(30rem 22rem at 88% 104%, rgba(34, 166, 244, 0.09), transparent 70%);
   color: var(--text);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
   font-size: 16px;
-  line-height: 1.6;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .card {
-  position: relative;
   width: 100%;
-  max-width: 620px;
-  padding: clamp(28px, 6vw, 48px);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  overflow: hidden;
+  max-width: 640px;
+  padding: clamp(30px, 6vw, 46px);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: linear-gradient(170deg, rgba(10, 18, 34, 0.85), rgba(5, 9, 18, 0.8));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), inset 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), transparent);
+.logo {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 22px;
 }
 
 .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 22px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: var(--pill-bg);
-  color: var(--pill-text);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  flex: none;
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 h1 {
   margin: 0;
-  font-size: clamp(28px, 6vw, 42px);
-  line-height: 1.15;
-  letter-spacing: -0.025em;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: clamp(1.75rem, 5.6vw, 2.6rem);
+  font-weight: 780;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--heading);
   overflow-wrap: anywhere;
 }
 
 .status {
   margin: 14px 0 0;
-  font-size: clamp(17px, 2.6vw, 20px);
-  font-weight: 600;
+  font-family: var(--display);
+  font-size: clamp(1.05rem, 2.6vw, 1.25rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--heading);
 }
 
 .lead, .note {
@@ -182,6 +169,8 @@ h1 {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+.lead strong { color: var(--text); font-weight: 600; }
 
 .actions {
   display: flex;
@@ -194,59 +183,66 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 13px 22px;
+  gap: 10px;
+  padding: 15px 30px;
   border: 1px solid transparent;
-  border-radius: 11px;
-  font-size: 15px;
-  font-weight: 600;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 0.95rem;
   text-decoration: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition: background 0.25s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: var(--accent-text);
+  background: linear-gradient(180deg, #3b96ff, #1a77f2);
+  border-color: rgba(140, 196, 255, 0.45);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.2), 0 0 26px rgba(26, 119, 242, 0.4);
+  color: #fff;
+  font-weight: 700;
 }
 
-.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:hover { background: linear-gradient(180deg, #4da3ff, #2483ff); }
 
-.btn-secondary {
-  border-color: var(--border);
-  color: var(--text);
+.btn-ghost {
+  background: rgba(12, 24, 44, 0.35);
+  border-color: rgba(82, 132, 200, 0.32);
+  color: rgba(196, 220, 248, 0.88);
+  font-weight: 600;
 }
 
-.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost:hover { border-color: rgba(140, 196, 255, 0.55); color: var(--heading); }
 
-.btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-.arrow { font-size: 17px; line-height: 1; }
+.arrow { font-size: 1.05rem; line-height: 1; }
 
 .divider {
   margin: 30px 0 0;
   border: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--card-border);
 }
 
 .fine {
   margin: 18px 0 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
-.fine a { color: inherit; }
+.fine a { color: rgba(196, 220, 248, 0.95); }
 
 footer {
-  color: var(--muted);
-  font-size: 13px;
+  max-width: 640px;
+  color: rgba(169, 194, 222, 0.72);
+  font-size: 0.8rem;
+  line-height: 1.6;
   text-align: center;
 }
 
-@media (max-width: 460px) {
+@media (max-width: 470px) {
   .actions { flex-direction: column; align-items: stretch; }
+  /* The brand letter-spacing costs a third line at this width. */
+  .eyebrow { font-size: 0.66rem; letter-spacing: 0.14em; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -261,28 +257,48 @@ footer {
  *   hostname: string,
  *   config?: typeof DEFAULT_CONFIG,
  *   entry?: import('./domains.js').DomainEntry | null,
+ *   logoHref?: string,
  *   year?: number,
  * }} params
  * @returns {string}
  */
-export function renderDomainPage({ hostname, config = DEFAULT_CONFIG, entry = null, year = new Date().getUTCFullYear() }) {
+export function renderDomainPage({
+  hostname,
+  config = DEFAULT_CONFIG,
+  entry = null,
+  logoHref = LOGO_PATH,
+  year = new Date().getUTCFullYear(),
+}) {
   const domain = truncate(hostname || 'This domain');
   const headline = truncate(entry?.headline || domain);
   const forSale = entry?.forSale !== false;
+  const owner = config.legalName || config.brandName;
 
-  const title = `${domain} — out of service`;
+  const title = `${domain} — out of service | ${config.brandName}`;
   const description =
-    `${domain} is owned by ${config.brandName} and is not currently in service. ` +
-    (forSale ? `Contact ${config.brandName} to enquire about the domain.` : `Contact ${config.brandName} for details.`);
+    `${domain} is owned by ${owner} and is not currently in service. ` +
+    (forSale ? `Get in touch with ${config.brandName} to enquire about the domain.` : `Contact ${config.brandName} for details.`);
 
   const mailto = buildMailto({ email: config.contactEmail, domain, brandName: config.brandName });
 
   const availability = forSale
-    ? `It is not in use right now, and we are open to offers from anyone who wants to put it to work.`
-    : `It is not in use right now, and it is reserved for an upcoming ${config.brandName} project.`;
+    ? 'It is not in use right now, and we are open to offers from anyone who wants to put it to work.'
+    : `It is not in use right now — it is reserved for an upcoming ${config.brandName} project.`;
 
-  const noteMarkup = entry?.note
-    ? `\n      <p class="note">${escapeHtml(entry.note)}</p>`
+  const taglineMarkup = config.tagline
+    ? `\n    <p class="eyebrow">${escapeHtml(config.tagline)}</p>`
+    : `\n    <p class="eyebrow">Owned by ${escapeHtml(config.brandName)}</p>`;
+
+  const noteMarkup = entry?.note ? `\n    <p class="note">${escapeHtml(entry.note)}</p>` : '';
+
+  // WhatsApp sits in the contact line rather than as a third button: two CTAs
+  // keep the hierarchy clear, and it is still one tap away.
+  const whatsappMarkup = config.whatsappUrl
+    ? ` or <a href="${escapeHtml(buildWhatsapp({ url: config.whatsappUrl, domain }))}" target="_blank" rel="noopener noreferrer">message us on WhatsApp</a>`
+    : '';
+
+  const registration = config.registrationNumber
+    ? ` &middot; Reg. No. ${escapeHtml(config.registrationNumber)}`
     : '';
 
   return `<!doctype html>
@@ -292,40 +308,42 @@ export function renderDomainPage({ hostname, config = DEFAULT_CONFIG, entry = nu
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
-  <meta name="author" content="${escapeHtml(config.brandName)}">
+  <meta name="author" content="${escapeHtml(owner)}">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#000000">
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:site_name" content="${escapeHtml(config.brandName)}">
+  <meta property="og:image" content="https://${escapeHtml(domain)}${escapeHtml(LOGO_PATH)}">
   <meta name="twitter:card" content="summary">
-  <meta name="theme-color" content="#0f1420">
-  <link rel="icon" href="${escapeHtml(FAVICON_HREF)}">
+  <link rel="icon" type="image/png" href="${escapeHtml(logoHref)}">
   <link rel="canonical" href="https://${escapeHtml(domain)}/">
   <style>${STYLES}</style>
 </head>
 <body>
   <main class="card">
-    <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Owned by ${escapeHtml(config.brandName)}</p>
+    <img class="logo" src="${escapeHtml(logoHref)}" alt="${escapeHtml(config.brandName)}" width="56" height="56">${taglineMarkup}
     <h1>${escapeHtml(headline)}</h1>
     <p class="status">This website is out of service.</p>
     <p class="lead">
-      <strong>${escapeHtml(domain)}</strong> is a domain owned by ${escapeHtml(config.brandName)}.
+      <strong>${escapeHtml(domain)}</strong> is a domain owned by ${escapeHtml(owner)}.
       ${escapeHtml(availability)}
     </p>${noteMarkup}
     <div class="actions">
       <a class="btn btn-primary" href="${escapeHtml(config.brandUrl)}">
         Visit ${escapeHtml(config.brandName)} <span class="arrow" aria-hidden="true">&rarr;</span>
       </a>
-      <a class="btn btn-secondary" href="${escapeHtml(mailto)}">Enquire about this domain</a>
+      <a class="btn btn-ghost" href="${escapeHtml(mailto)}">Enquire about this domain</a>
     </div>
     <hr class="divider">
     <p class="fine">
-      Want this domain? Email us at
-      <a href="${escapeHtml(mailto)}">${escapeHtml(config.contactEmail)}</a>
+      Want this domain? Email
+      <a href="${escapeHtml(mailto)}">${escapeHtml(config.contactEmail)}</a>${whatsappMarkup},
       and mention <strong>${escapeHtml(domain)}</strong>.
     </p>
   </main>
-  <footer>&copy; ${escapeHtml(year)} ${escapeHtml(config.brandName)}. All rights reserved.</footer>
+  <footer>&copy; ${escapeHtml(year)} ${escapeHtml(config.brandName)}${registration}. All rights reserved.</footer>
 </body>
 </html>
 `;

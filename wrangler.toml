@@ -20,6 +20,12 @@ routes = []
 enabled = true
 
 [vars]
-BRAND_NAME = "RapidRise AI"
-BRAND_URL = "https://rapidriseai.com"
-CONTACT_EMAIL = "domains@rapidriseai.com"
+BRAND_NAME = "Rapid Rise AI"
+BRAND_URL = "https://www.rapidriseai.com"
+CONTACT_EMAIL = "team@rapidriseai.com"
+LEGAL_NAME = "Rapid Rise AI (Pty) Ltd"
+REGISTRATION_NUMBER = "K2024727338"
+TAGLINE = "Custom Software, AI Systems & Business Automation"
+# Blank out WHATSAPP_URL to drop the WhatsApp button from the page.
+WHATSAPP_URL = "https://wa.me/27649031234"
+WHATSAPP_LABEL = "064 903 1234"
