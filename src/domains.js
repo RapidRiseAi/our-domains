@@ -2,14 +2,14 @@
  * The domains we own but are not currently using.
  *
  * This list is the single source of truth. It drives:
- *   1. the Cloudflare routes in wrangler.toml (`npm run routes:sync`)
+ *   1. the Cloudflare custom domains in wrangler.toml (`npm run routes:sync`)
  *   2. the optional per-domain copy on the parked page
  *
  * Only `domain` is required. Everything else is optional:
  *
  *   {
  *     domain: 'example.com',   // apex domain, no protocol, no trailing slash
- *     www: true,               // also route www.example.com (default: true)
+ *     www: true,               // also attach www.example.com (default: true)
  *     headline: 'Example',     // replaces the domain name as the page headline
  *     note: 'Reserved for a future product launch.',  // extra line of copy
  *     forSale: true,           // default: true — set false for "not available"
@@ -22,9 +22,8 @@
 
 /** @type {DomainEntry[]} */
 export const DOMAINS = [
-  // Add owned-but-inactive domains here, for example:
-  // { domain: 'example.com' },
-  // { domain: 'another-example.com', note: 'Reserved for a future product launch.', forSale: false },
+  { domain: 'integriforensicservices.com' },
+  { domain: 'bushbabybnb.co.za' },
 ];
 
 /**

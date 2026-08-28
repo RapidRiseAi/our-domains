@@ -18,8 +18,14 @@ export const BEGIN = '# BEGIN GENERATED ROUTES - do not edit by hand, run `npm r
 export const END = '# END GENERATED ROUTES';
 
 /**
- * Cloudflare needs the zone (the apex) alongside each route pattern, so the www
- * and apex patterns both point back at the same zone_name.
+ * Attach each hostname as a Cloudflare *custom domain* rather than a route.
+ *
+ * The difference matters. A route only matches traffic that already reaches
+ * Cloudflare, so it needs a proxied DNS record you create and maintain by hand
+ * — and a record that is merely "DNS only" leaves the domain unreachable while
+ * the dashboard still lists the route. A custom domain creates and proxies that
+ * record itself, and manages the certificate, which is one fewer thing to get
+ * wrong on every new domain.
  *
  * @param {import('../src/domains.js').DomainEntry[]} [domains]
  * @returns {string}
@@ -42,9 +48,9 @@ export function buildRoutesBlock(domains = DOMAINS) {
     }
     seen.add(apex);
 
-    lines.push(`  { pattern = "${apex}/*", zone_name = "${apex}" }`);
+    lines.push(`  { pattern = "${apex}", custom_domain = true }`);
     if (entry.www !== false) {
-      lines.push(`  { pattern = "www.${apex}/*", zone_name = "${apex}" }`);
+      lines.push(`  { pattern = "www.${apex}", custom_domain = true }`);
     }
   }
 

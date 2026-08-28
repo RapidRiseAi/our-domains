@@ -35,24 +35,31 @@ npm run build:static -- coolstartup.io   # render dist/index.html to eyeball it
    ];
    ```
 
-2. Regenerate the Cloudflare routes and deploy:
+2. Regenerate the Cloudflare attachments and deploy:
 
    ```bash
    npm run routes:sync
    npm run deploy
    ```
 
-3. In the Cloudflare dashboard, make sure the zone has a **proxied** DNS record
-   for the apex and for `www`. A Worker route only fires if DNS resolves, and a
-   parked domain has no origin to point at, so use the documentation address:
+That is the whole process — the zone needs to be in the same Cloudflare account,
+and nothing else needs setting up by hand.
 
-   | Type | Name  | Content     | Proxy      |
-   | ---- | ----- | ----------- | ---------- |
-   | A    | `@`   | `192.0.2.1` | Proxied 🟠 |
-   | A    | `www` | `192.0.2.1` | Proxied 🟠 |
+`npm run routes:sync` writes **custom domains**, not routes:
 
-   The Worker intercepts the request before anything tries to reach that
-   address, so it is never actually contacted.
+```toml
+routes = [
+  { pattern = "example.com", custom_domain = true },
+  { pattern = "www.example.com", custom_domain = true }
+]
+```
+
+The distinction is the one thing worth understanding here. A *route* only matches
+traffic that already reaches Cloudflare, so it needs a proxied DNS record that
+you create and keep correct yourself. A *custom domain* creates that record,
+proxies it, and manages the certificate for you. Both show up in the same
+dashboard list, which makes a half-configured route easy to miss — see
+[Troubleshooting](#troubleshooting).
 
 `npm run routes:check` fails if `wrangler.toml` has drifted from the registry —
 it runs as part of `npm run check` and in CI.
@@ -127,6 +134,51 @@ Every response carries `nosniff`, `X-Frame-Options: DENY`, and a CSP that allows
 nothing but the page's own inline styles — there is no JavaScript on the page at
 all. HTML is cached for 5 minutes so a domain coming back into service does not
 stay stale for long.
+
+## Troubleshooting
+
+### The domain shows "This site can't be reached" / `DNS_PROBE_FINISHED_NXDOMAIN`
+
+The request never got to Cloudflare, so the Worker was never involved. Check
+what the domain actually resolves to:
+
+```bash
+dig +short bushbabybnb.co.za A
+dig +short bushbabybnb.co.za AAAA
+```
+
+| What you see | What it means |
+| ------------ | ------------- |
+| `104.21.x.x` / `172.67.x.x` | Proxied correctly — the Worker will run |
+| `100::` and no A record | **Not proxied.** The record is "DNS only" |
+| nothing at all | No DNS record, or the zone's nameservers are not Cloudflare's |
+
+`100::` is the IPv6 discard address. Cloudflare uses it as the placeholder
+target for a Worker custom domain, and it is only ever meant to sit *behind* the
+proxy — the outside world should see Cloudflare's anycast IPs instead. If `100::`
+is visible publicly, the record is not being proxied, and every visitor is sent
+to an address that goes nowhere. Because there is no A record either, IPv4-only
+clients get nothing back at all, which is what the browser reports as NXDOMAIN.
+
+Two things turn the proxy off, so check both:
+
+1. **Grey cloud.** In DNS → Records, the apex and `www` records must be
+   **Proxied** 🟠, not DNS only ☁️.
+2. **A paused zone.** Overview → "Pause Cloudflare on Site" bypasses the proxy
+   for every record in the zone at once. If it is paused, resume it.
+
+Confirm the fix from outside your own network, since a local resolver will have
+cached the old answer:
+
+```bash
+curl -sS 'https://dns.google/resolve?name=bushbabybnb.co.za&type=A' | jq '.Answer'
+```
+
+### The domain resolves but serves the wrong thing
+
+Check the Worker itself on its own URL first — `our-domains.<subdomain>.workers.dev`.
+If that serves the parked page, the Worker is fine and the problem is in how the
+domain is attached.
 
 ## Parking a domain that is not on Cloudflare
 

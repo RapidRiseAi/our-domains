@@ -12,8 +12,12 @@ compatibility_date = "2026-08-27"
 workers_dev = true
 
 # BEGIN GENERATED ROUTES - do not edit by hand, run `npm run routes:sync`
-# No domains registered yet - add them to src/domains.js.
-routes = []
+routes = [
+  { pattern = "integriforensicservices.com", custom_domain = true },
+  { pattern = "www.integriforensicservices.com", custom_domain = true },
+  { pattern = "bushbabybnb.co.za", custom_domain = true },
+  { pattern = "www.bushbabybnb.co.za", custom_domain = true }
+]
 # END GENERATED ROUTES
 
 [observability]
